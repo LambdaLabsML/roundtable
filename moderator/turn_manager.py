@@ -14,43 +14,38 @@ class TurnManager:
             return self.moderator_id
         
         elif state.current_round == Round.EVIDENCE:
-            # Each panelist speaks once in moderator-determined order
             spoken = {msg.participant_id for msg in state.transcript 
                      if msg.round == Round.EVIDENCE}
             remaining = [p for p in self.panelist_ids if p not in spoken]
             
             if not remaining:
-                return self.moderator_id  # Transition to next round
+                return self.moderator_id
             
-            # Moderator decides order (for PoC, randomize)
             return random.choice(remaining)
         
         elif state.current_round == Round.CROSS_EXAMINATION:
-            # Each panelist must respond to others
             examined = {msg.participant_id for msg in state.transcript 
                        if msg.round == Round.CROSS_EXAMINATION}
             remaining = [p for p in self.panelist_ids if p not in examined]
             
             if not remaining:
-                return self.moderator_id  # Transition to Round 3
+                return self.moderator_id
             
             return remaining[0]
         
         elif state.current_round == Round.CONVERGENCE:
-            # Moderator proposes, each panelist responds, moderator concludes
             messages_in_round = [msg for msg in state.transcript 
                                 if msg.round == Round.CONVERGENCE]
             
             if len(messages_in_round) == 0:
-                return self.moderator_id  # Initial proposal
+                return self.moderator_id
             elif len(messages_in_round) <= len(self.panelist_ids):
-                # Panelists respond
                 responded = {msg.participant_id for msg in messages_in_round[1:]}
                 remaining = [p for p in self.panelist_ids if p not in responded]
                 if remaining:
                     return remaining[0]
             
-            return self.moderator_id  # Final consensus
+            return self.moderator_id
     
     def should_advance_round(self, state: DiscussionState) -> bool:
         """Check if current round is complete"""
@@ -71,7 +66,6 @@ class TurnManager:
         elif state.current_round == Round.CONVERGENCE:
             messages_in_round = [msg for msg in state.transcript 
                                 if msg.round == Round.CONVERGENCE]
-            # Need moderator proposal + 3 responses + final consensus
             return len(messages_in_round) >= len(self.panelist_ids) + 2
         
         return False

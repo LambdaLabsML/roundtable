@@ -33,7 +33,6 @@ class TerminalUI:
         self.console.print("\n[bold white]═══ ROUNDTABLE ═══[/bold white]\n", justify="center")
         self.console.print(f"[dim]Topic:[/dim] [bold]{topic}[/bold]\n", justify="center")
         
-        # Round progress indicator
         progress_bar = ""
         for r in Round:
             if r.value < current_round.value:
@@ -70,19 +69,7 @@ class TerminalUI:
     def display_thinking(self, participant: str):
         """Show thinking indicator"""
         color = self.participant_colors.get(participant, "white")
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=self.console,
-            transient=True
-        ) as progress:
-            task = progress.add_task(
-                description=f"[{color}]{participant}[/{color}] is formulating response...",
-                total=None
-            )
-            # Let it run for a moment
-            import time
-            time.sleep(0.5)
+        self.console.print(f"[{color}]{participant}[/{color}] is formulating response...")
     
     def display_round_transition(self, from_round: Round, to_round: Round):
         """Display round transition"""

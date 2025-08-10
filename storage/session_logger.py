@@ -17,7 +17,6 @@ class SessionLogger:
         filename = f"{timestamp}_{safe_topic}.json"
         filepath = self.sessions_dir / filename
         
-        # Convert to serializable format
         session_data = {
             "id": state.id,
             "topic": state.topic,
@@ -54,7 +53,6 @@ class SessionLogger:
         with open(filepath, 'r') as f:
             data = json.load(f)
         
-        # Reconstruct state
         transcript = [
             Message(
                 participant_id=msg["participant_id"],
@@ -100,11 +98,10 @@ class SessionLogger:
         return sessions
     
     def autosave(self, state: DiscussionState, filename: Optional[str] = None):
-        """Autosave current state (overwrites if filename provided)"""
+        """Autosave current state"""
         if filename:
             filepath = self.sessions_dir / filename
         else:
-            # Create autosave file
             filepath = self.sessions_dir / f"autosave_{state.id}.json"
         
         session_data = {

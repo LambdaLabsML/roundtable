@@ -12,6 +12,7 @@ from storage.session_logger import SessionLogger
 from config import API_KEYS
 import signal
 import sys
+import traceback
 
 class RoundtableApp:
     def __init__(self):
@@ -19,13 +20,21 @@ class RoundtableApp:
         self.logger = SessionLogger()
         self.turn_manager = TurnManager()
         
+        # Check API keys before initializing
+        self.check_api_keys()
+        
         # Initialize LLM clients
-        self.clients = {
-            "claude_moderator": ClaudeClient(API_KEYS["anthropic"]),
-            "claude": ClaudeClient(API_KEYS["anthropic"]),
-            "gpt5": GPTClient(API_KEYS["openai"]),
-            "gemini": GeminiClient(API_KEYS["google"])
-        }
+        try:
+            self.clients = {
+                "claude_moderator": ClaudeClient(API_KEYS["anthropic"]),
+                "claude": ClaudeClient(API_KEYS["anthropic"]),
+                "gpt5": GPTClient(API_KEYS["openai"]),
+                "gemini": GeminiClient(API_KEYS["google"])
+            }
+        except Exception as e:
+            self.ui.console.print(f"[red]Error initializing LLM clients: {e}[/red]")
+            self.ui.console.print("[yellow]Please check your API keys in .env file[/yellow]")
+            sys.exit(1)
         
         self.participant_models = {
             "claude_moderator": "Claude 4.1 Opus",
@@ -39,6 +48,18 @@ class RoundtableApp:
         # Handle Ctrl+C gracefully
         signal.signal(signal.SIGINT, self.handle_interrupt)
     
+    def check_api_keys(self):
+        """Check if API keys are set"""
+        missing_keys = []
+        for service, key in API_KEYS.items():
+            if not key or key == f"your_{service}_api_key_here":
+                missing_keys.append(service.upper())
+        
+        if missing_keys:
+            self.ui.console.print(f"[red]Missing API keys: {', '.join(missing_keys)}[/red]")
+            self.ui.console.print("[yellow]Please set them in the .env file[/yellow]")
+            sys.exit(1)
+    
     def handle_interrupt(self, signum, frame):
         """Save state on interrupt"""
         self.ui.console.print("\n[yellow]Interrupted. Saving session...[/yellow]")
@@ -49,11 +70,15 @@ class RoundtableApp:
     
     def load_prompts(self) -> tuple[str, str]:
         """Load prompt templates"""
-        with open('prompts/moderator.txt', 'r') as f:
-            moderator_prompt = f.read()
-        with open('prompts/panelist.txt', 'r') as f:
-            panelist_prompt = f.read()
-        return moderator_prompt, panelist_prompt
+        try:
+            with open('prompts/moderator.txt', 'r') as f:
+                moderator_prompt = f.read()
+            with open('prompts/panelist.txt', 'r') as f:
+                panelist_prompt = f.read()
+            return moderator_prompt, panelist_prompt
+        except FileNotFoundError as e:
+            self.ui.console.print(f"[red]Error loading prompts: {e}[/red]")
+            sys.exit(1)
     
     async def generate_response(
         self,
@@ -61,7 +86,7 @@ class RoundtableApp:
         state: DiscussionState,
         is_moderator: bool = False
     ) -> str:
-        """Generate response from LLM"""
+        """Generate response from LLM with better error handling"""
         moderator_prompt, panelist_prompt = self.load_prompts()
         
         # Prepare conversation history
@@ -70,6 +95,13 @@ class RoundtableApp:
             history.append({
                 "role": "assistant" if msg.participant_id == participant_id else "user",
                 "content": f"[{msg.participant_model}]: {msg.content}"
+            })
+        
+        # If this is the first message in the discussion, add a default user message
+        if not history:
+            history.append({
+                "role": "user",
+                "content": f"Let's begin the discussion on: {state.topic}"
             })
         
         # Select appropriate prompt
@@ -84,15 +116,20 @@ class RoundtableApp:
                 round_name=self.ui.round_names[state.current_round]
             )
         
-        # Generate response
+        # Generate response with error details
         client = self.clients[participant_id]
-        response = await client.generate_response(
-            system_prompt=system_prompt,
-            messages=history,
-            temperature=0.7
-        )
         
-        return response
+        try:
+            response = await client.generate_response(
+                system_prompt=system_prompt,
+                messages=history,
+                temperature=0.7
+            )
+            return response
+        except Exception as e:
+            self.ui.console.print(f"[red]Error from {participant_id}: {str(e)}[/red]")
+            self.ui.console.print(f"[yellow]Error type: {type(e).__name__}[/yellow]")
+            raise
     
     async def run_discussion(self, topic: str):
         """Run a full discussion"""
@@ -111,6 +148,8 @@ class RoundtableApp:
         )
         
         turn_number = 0
+        retry_count = 0
+        max_retries = 3
         
         while self.current_state.status == "in_progress":
             # Display current state
@@ -136,10 +175,18 @@ class RoundtableApp:
                     self.current_state,
                     is_moderator
                 )
+                retry_count = 0  # Reset retry count on success
             except Exception as e:
-                self.ui.console.print(f"[red]Error generating response: {e}[/red]")
-                self.ui.console.print("[yellow]Retrying...[/yellow]")
-                await asyncio.sleep(2)
+                retry_count += 1
+                self.ui.console.print(f"[red]Error generating response (attempt {retry_count}/{max_retries}): {e}[/red]")
+                
+                if retry_count >= max_retries:
+                    self.ui.console.print("[red]Max retries exceeded. Saving state and exiting.[/red]")
+                    self.logger.autosave(self.current_state)
+                    return
+                
+                self.ui.console.print(f"[yellow]Retrying in 3 seconds...[/yellow]")
+                await asyncio.sleep(3)
                 continue
             
             # Add to transcript

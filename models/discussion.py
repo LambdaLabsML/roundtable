@@ -25,8 +25,8 @@ class Message:
 
 @dataclass
 class CrossExamination:
-    strongest_points: Dict[str, str]  # participant_id -> point
-    steelman_improvements: Dict[str, str]  # participant_id -> improvement
+    strongest_points: Dict[str, str]
+    steelman_improvements: Dict[str, str]
     concrete_risks: List[str]
 
 @dataclass
