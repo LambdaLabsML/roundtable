@@ -4,7 +4,7 @@ A Python terminal application that orchestrates structured, truth-seeking discus
 
 ## Features
 - Structured 4-round Socratic discussions
-- Three AI panelists (GPT-5, Claude 4.1, Gemini Pro) with a Claude moderator
+- Three AI panelists (GPT-5, Claude 4.1, Gemini 2.5 Pro) with a Claude moderator
 - Automatic session saving and replay functionality
 - Clean terminal UI with rich formatting
 - Graceful error handling and interruption support
@@ -65,5 +65,5 @@ If you encounter API errors:
 ## Notes
 
 - Uses GPT-5 (gpt-5-2025-08-07)
-- Gemini 2.0 Pro falls back to Gemini Pro if not available
+- Gemini 2.5 Pro falls back to Gemini Pro if not available
 - Discussion time varies based on API response times (typically 5-10 minutes)

@@ -40,7 +40,7 @@ class RoundtableApp:
             "claude_moderator": "Claude 4.1 Opus",
             "claude": "Claude 4.1 Opus",
             "gpt5": "GPT-5 Thinking",
-            "gemini": "Gemini 2.0 Pro"
+            "gemini": "Gemini 2.5 Pro"
         }
         
         self.current_session_file = None
