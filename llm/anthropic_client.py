@@ -56,7 +56,7 @@ class ClaudeClient(LLMClient):
                 
                 # Log the request parameters for debugging
                 logging.info(f"Making Anthropic API request with:")
-                logging.info(f"  Model: claude-3-5-sonnet-20241022")
+                logging.info(f"  Model: claude-opus-4-1-20250805")
                 logging.info(f"  System prompt length: {len(system_prompt)}")
                 logging.info(f"  Messages count: {len(messages)}")
                 logging.info(f"  Temperature: {temperature}")
@@ -69,7 +69,7 @@ class ClaudeClient(LLMClient):
                 # Convert to sync call wrapped in async
                 response = await asyncio.to_thread(
                     self.client.messages.create,
-                    model="claude-3-5-sonnet-20241022",
+                    model="claude-opus-4-1-20250805",
                     system=system_prompt,
                     messages=messages,
                     temperature=temperature,
