@@ -39,7 +39,7 @@ class GPTClient(LLMClient):
                 # Convert to sync call wrapped in async
                 response = await asyncio.to_thread(
                     self.client.chat.completions.create,
-                    model="gpt-4-turbo-preview",  # Using GPT-4 as placeholder
+                    model="gpt-5-2025-08-07",
                     messages=messages_formatted,
                     temperature=temperature,
                     max_tokens=max_tokens
