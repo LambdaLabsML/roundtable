@@ -61,9 +61,9 @@ def main():
     print(f"\n✅ All {len(available)} API keys are available")
     print("\n🚀 Running real integration tests...")
     
-    # Run the real tests
+    # Run the real tests using the specific config
     try:
-        cmd = ["python", "-m", "pytest", "tests/test_real_integration.py", "-v", "-m", "real_api"]
+        cmd = ["python", "-m", "pytest", "-c", "pytest.real.ini"]
         result = subprocess.run(cmd, check=False)
         
         if result.returncode == 0:

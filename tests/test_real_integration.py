@@ -52,7 +52,7 @@ def should_skip_real_tests():
     
     available, missing = check_api_keys_available()
     if not available:
-        return True, f"Missing API keys: {', '.join(missing)}"
+        return True, f"Missing API keys: {', '.join(missing)}. Set them in .env file or as environment variables."
     
     return False, None
 

@@ -78,11 +78,14 @@ cp .env.template .env
 # Using the helper script (recommended)
 python run_real_tests.py
 
-# Or run directly with pytest
-pytest tests/test_real_integration.py -v -m real_api
+# Or run directly with pytest (explicit marker)
+pytest -m real_api -v
 
-# Run both mock and real tests
-pytest -m "mock_api or real_api" -v
+# Run only real tests using dedicated config
+pytest -c pytest.real.ini
+
+# Run all tests including real ones (if API keys available)
+pytest tests/ -v
 ```
 
 **Environment Variables:**
