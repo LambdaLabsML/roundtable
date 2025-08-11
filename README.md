@@ -64,6 +64,6 @@ If you encounter API errors:
 
 ## Notes
 
-- GPT-5 is simulated using GPT-4 Turbo until GPT-5 is available
+- Uses GPT-5 (gpt-5-2025-08-07)
 - Gemini 2.0 Pro falls back to Gemini Pro if not available
 - Discussion time varies based on API response times (typically 5-10 minutes)
