@@ -38,11 +38,11 @@ class GPTClient(LLMClient):
                 
                 # Convert to sync call wrapped in async
                 # GPT-5 uses max_completion_tokens instead of max_tokens
+                # GPT-5 only supports default temperature (1), so we omit temperature parameter
                 response = await asyncio.to_thread(
                     self.client.chat.completions.create,
                     model="gpt-5-2025-08-07",
                     messages=messages_formatted,
-                    temperature=temperature,
                     max_completion_tokens=max_tokens
                 )
                 
