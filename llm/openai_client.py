@@ -37,12 +37,13 @@ class GPTClient(LLMClient):
                 messages_formatted = [{"role": "system", "content": system_prompt}] + messages
                 
                 # Convert to sync call wrapped in async
+                # GPT-5 uses max_completion_tokens instead of max_tokens
                 response = await asyncio.to_thread(
                     self.client.chat.completions.create,
                     model="gpt-5-2025-08-07",
                     messages=messages_formatted,
                     temperature=temperature,
-                    max_tokens=max_tokens
+                    max_completion_tokens=max_tokens
                 )
                 
                 if response and response.choices and response.choices[0].message:
