@@ -1,0 +1,8 @@
+-r requirements.txt
+-r requirements-test.txt
+
+# Additional dev tools (optional)
+black>=23.0.0          # Code formatter
+flake8>=6.0.0          # Linter
+mypy>=1.0.0            # Type checker
+ipython>=8.0.0         # Better Python shell
