@@ -11,24 +11,18 @@ A Python terminal application that orchestrates structured, truth-seeking discus
 
 ## Installation
 
-1. Extract the zip file:
-```bash
-unzip roundtable.zip
-cd roundtable
-```
-
-2. Create a virtual environment:
+1. Create a virtual environment:
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Install dependencies:
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Set up API keys:
+3. Set up API keys:
 ```bash
 cp .env.template .env
 # Edit .env and add your API keys
