@@ -1,4 +1,4 @@
-"""Minimal tests for Roundtable application"""
+"""Minimal mock tests for Roundtable application"""
 
 import sys
 import os
@@ -201,12 +201,13 @@ def test_session_save_and_load(tmp_path):
     assert loaded_state.id == "test-123"
     assert len(loaded_state.transcript) == 1
 
+@pytest.mark.mock_api
 @patch('anthropic.Anthropic')
 @patch('openai.OpenAI')
 @patch('google.generativeai.configure')
 @patch('google.generativeai.GenerativeModel')
-def test_llm_client_initialization(mock_gemini_model, mock_gemini_config, mock_openai, mock_anthropic):
-    """Test that LLM clients can be initialized"""
+def test_llm_client_initialization_mocked(mock_gemini_model, mock_gemini_config, mock_openai, mock_anthropic):
+    """Test that LLM clients can be initialized with mocked APIs"""
     # Mock the API clients
     mock_anthropic.return_value = MagicMock()
     mock_openai.return_value = MagicMock()

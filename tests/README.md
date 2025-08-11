@@ -14,12 +14,21 @@ pytest tests/ -v
 
 ## Test Coverage
 
-The minimal test suite covers:
+### Mock Tests (`test_basic.py`)
+The mock test suite covers:
 - ✅ Model creation (Role, Round, Message, DiscussionState)
 - ✅ Turn manager logic
 - ✅ Session saving and loading
 - ✅ Configuration loading
 - ✅ LLM client initialization (mocked)
+
+### Real Integration Tests (`test_real_integration.py`)
+The real integration test suite covers:
+- ✅ Real API client initialization with actual API keys
+- ✅ Real API calls to Anthropic, OpenAI, and Google
+- ✅ Real discussion flow with actual LLM responses
+- ✅ Error handling with real API responses
+- ✅ API key validation and security
 
 ## GitHub Actions
 
@@ -38,8 +47,9 @@ Tests run automatically on:
 
 ## Running Tests Locally
 
+### Mock Tests (Default)
 ```bash
-# Basic test run
+# Run all mock tests (default)
 pytest
 
 # Verbose output
@@ -55,32 +65,99 @@ pytest -s
 pytest -x
 ```
 
+### Real Integration Tests
+
+**Prerequisites:** Set up your API keys in `.env` file or environment variables:
+```bash
+cp .env.template .env
+# Edit .env with your real API keys
+```
+
+**Run real integration tests:**
+```bash
+# Using the helper script (recommended)
+python run_real_tests.py
+
+# Or run directly with pytest (explicit marker)
+pytest -m real_api -v
+
+# Run only real tests using dedicated config
+pytest -c pytest.real.ini
+
+# Run all tests including real ones (if API keys available)
+pytest tests/ -v
+```
+
+**Environment Variables:**
+- `ANTHROPIC_API_KEY`: Your Anthropic API key
+- `OPENAI_API_KEY`: Your OpenAI API key  
+- `GOOGLE_API_KEY`: Your Google API key
+- `SKIP_REAL_TESTS=1`: Skip real tests even if API keys are available
+
 ## Test Structure
 
 ```
 tests/
-├── __init__.py         # Package marker
-└── test_basic.py       # All tests in one file (minimalistic)
+├── __init__.py                # Package marker
+├── test_basic.py             # Mock tests (no real API calls)
+├── test_real_integration.py  # Real integration tests (requires API keys)
+└── README.md                 # This documentation
 ```
+
+**Additional Files:**
+- `pytest.ini` - Test configuration and markers
+- `run_real_tests.py` - Helper script for running real tests
 
 ## Adding New Tests
 
-Add new test functions to `test_basic.py`:
+### Mock Tests
+Add new mock test functions to `test_basic.py`:
 
 ```python
+@pytest.mark.mock_api  # Optional marker
 def test_your_feature():
     """Test description"""
-    # Your test code
+    # Your test code with mocked APIs
     assert expected == actual
 ```
 
-## Mocking External APIs
-
-The tests mock all external API calls to avoid requiring real API keys:
+### Real Integration Tests  
+Add new real test functions to `test_real_integration.py`:
 
 ```python
+@pytest.mark.real_api
+@pytest.mark.skipif(skip_real_tests, reason=skip_reason)
+class TestYourRealFeature:
+    @pytest.mark.asyncio
+    async def test_real_feature(self):
+        """Test with real API calls"""
+        from config import API_KEYS
+        # Your test code with real APIs
+        assert expected == actual
+```
+
+## Test Types
+
+### Mock Tests (Default)
+Mock tests use `@patch` decorators to mock external API calls:
+
+```python
+@pytest.mark.mock_api
 @patch('anthropic.Anthropic')
 def test_with_mocked_api(mock_anthropic):
     mock_anthropic.return_value = MagicMock()
     # Your test code
+```
+
+### Real Integration Tests
+Real tests use actual API keys and make real API calls:
+
+```python
+@pytest.mark.real_api
+@pytest.mark.asyncio
+async def test_real_api_call():
+    from config import API_KEYS
+    client = ClaudeClient(API_KEYS["anthropic"])
+    response = await client.generate_response(...)
+    assert isinstance(response, str)
 ```
