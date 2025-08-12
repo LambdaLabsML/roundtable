@@ -18,6 +18,7 @@ def test_imports():
         from models.discussion import Role, Round, Message, DiscussionState
         from moderator.turn_manager import TurnManager
         from storage.session_logger import SessionLogger
+        from ui.terminal import TerminalUI
         assert True
     except ImportError as e:
         pytest.fail(f"Import failed: {e}")

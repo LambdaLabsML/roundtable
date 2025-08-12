@@ -1,5 +1,7 @@
 import os
 import sys
+import termios
+import tty
 from typing import Optional
 from rich.console import Console
 from rich.panel import Panel
@@ -120,3 +122,18 @@ class TerminalUI:
             padding=(1, 2)
         )
         self.console.print(panel)
+    
+    def get_single_keypress(self) -> str:
+        """Get a single keypress without requiring Enter"""
+        if os.name == 'nt':  # Windows
+            import msvcrt
+            return msvcrt.getch().decode('utf-8').lower()
+        else:  # Unix/Linux/macOS
+            fd = sys.stdin.fileno()
+            old_settings = termios.tcgetattr(fd)
+            try:
+                tty.setraw(sys.stdin.fileno())
+                ch = sys.stdin.read(1).lower()
+                return ch
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
