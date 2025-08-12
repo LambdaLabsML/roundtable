@@ -21,6 +21,25 @@ import asyncio
 from datetime import datetime
 from unittest.mock import patch
 import logging
+# Handle API keys for different environments (local vs CI/CD)
+import os
+from pathlib import Path
+
+# Check if .env file exists
+# Look for .env file in the project root (parent of tests directory)
+project_root = Path(__file__).parent.parent
+env_file_exists = (project_root / '.env').exists()
+
+if env_file_exists:
+    # Local development with .env file - import from config
+    from config import API_KEYS
+else:
+    # CI/CD or no .env file - use environment variables directly
+    API_KEYS = {
+        "anthropic": os.getenv("ANTHROPIC_API_KEY"),
+        "openai": os.getenv("OPENAI_API_KEY"),
+        "google": os.getenv("GOOGLE_API_KEY")
+    }
 
 # Configure logging for tests
 logging.basicConfig(level=logging.INFO)
@@ -33,12 +52,11 @@ def pytest_configure(config):
 
 def check_api_keys_available():
     """Check if real API keys are available for testing"""
-    required_keys = ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY"]
+    required_keys = ["anthropic", "openai", "google"]
     missing_keys = []
     
     for key in required_keys:
-        value = os.getenv(key)
-        if not value or value == f"your_{key.lower().replace('_api_key', '')}_api_key_here":
+        if not API_KEYS[key]:
             missing_keys.append(key)
     
     if missing_keys:
@@ -59,7 +77,7 @@ def should_skip_real_tests():
 # Skip condition
 skip_reason_check = should_skip_real_tests()
 skip_real_tests = skip_reason_check[0]
-skip_reason = skip_reason_check[1]
+skip_reason = skip_reason_check[1] or "Skipping real API tests"
 
 @pytest.mark.real_api
 @pytest.mark.skipif(skip_real_tests, reason=skip_reason)
@@ -69,7 +87,6 @@ class TestRealAPIIntegration:
     def test_real_anthropic_client_initialization(self):
         """Test real Anthropic client initialization with actual API key"""
         from llm.anthropic_client import ClaudeClient
-        from config import API_KEYS
         
         # Should not raise exception with real API key
         client = ClaudeClient(API_KEYS["anthropic"])
@@ -79,7 +96,6 @@ class TestRealAPIIntegration:
     def test_real_openai_client_initialization(self):
         """Test real OpenAI client initialization with actual API key"""
         from llm.openai_client import GPTClient
-        from config import API_KEYS
         
         # Should not raise exception with real API key
         client = GPTClient(API_KEYS["openai"])
@@ -89,7 +105,6 @@ class TestRealAPIIntegration:
     def test_real_google_client_initialization(self):
         """Test real Google client initialization with actual API key"""
         from llm.google_client import GeminiClient
-        from config import API_KEYS
         
         # Should not raise exception with real API key
         client = GeminiClient(API_KEYS["google"])
@@ -100,7 +115,6 @@ class TestRealAPIIntegration:
     async def test_real_anthropic_generate_response(self):
         """Test real Anthropic API call with simple prompt"""
         from llm.anthropic_client import ClaudeClient
-        from config import API_KEYS
         
         client = ClaudeClient(API_KEYS["anthropic"])
         
@@ -111,7 +125,7 @@ class TestRealAPIIntegration:
             system_prompt=system_prompt,
             messages=messages,
             temperature=0.1,  # Low temperature for consistency
-            max_tokens=50
+            max_tokens=2048  # Increased to avoid truncation
         )
         
         assert isinstance(response, str)
@@ -122,7 +136,6 @@ class TestRealAPIIntegration:
     async def test_real_openai_generate_response(self):
         """Test real OpenAI API call with simple prompt"""
         from llm.openai_client import GPTClient
-        from config import API_KEYS
         
         client = GPTClient(API_KEYS["openai"])
         
@@ -132,8 +145,7 @@ class TestRealAPIIntegration:
         response = await client.generate_response(
             system_prompt=system_prompt,
             messages=messages,
-            temperature=0.1,  # Low temperature for consistency
-            max_tokens=50
+            max_tokens=2048  # Increased to give GPT-5 room to generate content
         )
         
         assert isinstance(response, str)
@@ -144,7 +156,6 @@ class TestRealAPIIntegration:
     async def test_real_google_generate_response(self):
         """Test real Google API call with simple prompt"""
         from llm.google_client import GeminiClient
-        from config import API_KEYS
         
         client = GeminiClient(API_KEYS["google"])
         
@@ -155,7 +166,7 @@ class TestRealAPIIntegration:
             system_prompt=system_prompt,
             messages=messages,
             temperature=0.1,  # Low temperature for consistency
-            max_tokens=50
+            max_tokens=2048  # Increased to avoid truncation
         )
         
         assert isinstance(response, str)
@@ -168,7 +179,6 @@ class TestRealAPIIntegration:
         from models.discussion import DiscussionState, Round, Role, Message
         from moderator.turn_manager import TurnManager
         from llm.anthropic_client import ClaudeClient
-        from config import API_KEYS
         import uuid
         
         # Initialize real client
@@ -238,7 +248,6 @@ class TestRealErrorHandling:
     async def test_real_api_error_handling(self):
         """Test handling of real API errors (rate limits, invalid requests)"""
         from llm.anthropic_client import ClaudeClient
-        from config import API_KEYS
         
         client = ClaudeClient(API_KEYS["anthropic"])
         
