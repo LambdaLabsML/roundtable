@@ -44,7 +44,6 @@ ENV/
 # Sessions and logs
 sessions/
 *.log
-autosave_*.json
 
 # IDE
 .vscode/

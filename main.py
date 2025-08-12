@@ -61,11 +61,8 @@ class RoundtableApp:
             sys.exit(1)
     
     def handle_interrupt(self, signum, frame):
-        """Save state on interrupt"""
-        self.ui.console.print("\n[yellow]Interrupted. Saving session...[/yellow]")
-        if hasattr(self, 'current_state'):
-            self.logger.autosave(self.current_state)
-            self.ui.console.print("[green]Session autosaved.[/green]")
+        """Handle interrupt signal"""
+        self.ui.console.print("\n[yellow]Interrupted. Exiting...[/yellow]")
         sys.exit(0)
     
     def load_prompts(self) -> tuple[str, str]:
@@ -181,8 +178,7 @@ class RoundtableApp:
                 self.ui.console.print(f"[red]Error generating response (attempt {retry_count}/{max_retries}): {e}[/red]")
                 
                 if retry_count >= max_retries:
-                    self.ui.console.print("[red]Max retries exceeded. Saving state and exiting.[/red]")
-                    self.logger.autosave(self.current_state)
+                    self.ui.console.print("[red]Max retries exceeded. Exiting.[/red]")
                     return
                 
                 self.ui.console.print(f"[yellow]Retrying in 3 seconds...[/yellow]")
@@ -202,9 +198,6 @@ class RoundtableApp:
             
             self.current_state.transcript.append(message)
             turn_number += 1
-            
-            # Autosave after each turn
-            self.logger.autosave(self.current_state, self.current_session_file)
             
             # Check for round advancement
             if self.turn_manager.should_advance_round(self.current_state):
