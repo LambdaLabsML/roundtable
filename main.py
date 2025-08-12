@@ -226,17 +226,57 @@ class RoundtableApp:
         self.ui.display_header(state.topic, Round.CONVERGENCE)
         
         current_round = Round.AGENDA
-        for msg in state.transcript:
+        for i, msg in enumerate(state.transcript):
             if msg.round != current_round:
                 current_round = msg.round
                 self.ui.console.print(f"\n[bold]═══ {self.ui.round_names[current_round]} ═══[/bold]\n")
             
             self.ui.display_message(msg)
             
-            # Pause between messages for readability
-            input("\n[Press Enter to continue...]")
+            # Check if we're at the final synthesis (convergence round)
+            is_final_synthesis = current_round == Round.CONVERGENCE
+            
+            # Check if this is the last message in the final synthesis round
+            is_last_message_in_final = (is_final_synthesis and 
+                                      i == len(state.transcript) - 1)
+            
+            if is_last_message_in_final:
+                # Final synthesis page - show enter to go back
+                input("\n[Press Enter to go back to main menu...]")
+                break
+            else:
+                # Not final synthesis - allow space to continue or F to fast forward
+                prompt = "\n[Press Space to continue, F to fast forward to final synthesis...]"
+                user_input = input(prompt).strip().lower()
+                
+                if user_input == 'f':
+                    # Fast forward to final synthesis
+                    # Find the first message in the convergence round
+                    for j, future_msg in enumerate(state.transcript[i+1:], i+1):
+                        if future_msg.round == Round.CONVERGENCE:
+                            # Clear screen and show header for convergence round
+                            self.ui.clear_screen()
+                            self.ui.display_header(state.topic, Round.CONVERGENCE)
+                            self.ui.console.print(f"\n[bold]═══ {self.ui.round_names[Round.CONVERGENCE]} ═══[/bold]\n")
+                            
+                            # Display all convergence messages
+                            convergence_messages = [m for m in state.transcript[j:] if m.round == Round.CONVERGENCE]
+                            for conv_msg in convergence_messages:
+                                self.ui.display_message(conv_msg)
+                            
+                            # Show final consensus if available
+                            if state.status == "completed" and state.round_metadata.get("consensus"):
+                                self.ui.display_final_consensus(state.round_metadata["consensus"])
+                            
+                            # Final synthesis page - show enter to go back
+                            input("\n[Press Enter to go back to main menu...]")
+                            return
+                    
+                    # If no convergence round found, show message and continue normally
+                    self.ui.console.print("[yellow]No final synthesis found in this session.[/yellow]")
+                    continue
         
-        # Show final consensus if available
+        # Show final consensus if available (for cases where we didn't fast forward)
         if state.status == "completed" and state.round_metadata.get("consensus"):
             self.ui.display_final_consensus(state.round_metadata["consensus"])
     
