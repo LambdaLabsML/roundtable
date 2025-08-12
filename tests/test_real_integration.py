@@ -33,12 +33,13 @@ def pytest_configure(config):
 
 def check_api_keys_available():
     """Check if real API keys are available for testing"""
-    required_keys = ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY"]
+    required_keys = ["anthropic", "openai", "google"]
     missing_keys = []
     
+    from config import API_KEYS
+
     for key in required_keys:
-        value = os.getenv(key)
-        if not value or value == f"your_{key.lower().replace('_api_key', '')}_api_key_here":
+        if not API_KEYS[key]:
             missing_keys.append(key)
     
     if missing_keys:
@@ -59,7 +60,7 @@ def should_skip_real_tests():
 # Skip condition
 skip_reason_check = should_skip_real_tests()
 skip_real_tests = skip_reason_check[0]
-skip_reason = skip_reason_check[1]
+skip_reason = skip_reason_check[1] or "Skipping real API tests"
 
 @pytest.mark.real_api
 @pytest.mark.skipif(skip_real_tests, reason=skip_reason)
@@ -111,7 +112,7 @@ class TestRealAPIIntegration:
             system_prompt=system_prompt,
             messages=messages,
             temperature=0.1,  # Low temperature for consistency
-            max_tokens=50
+            max_tokens=2048  # Increased to avoid truncation
         )
         
         assert isinstance(response, str)
@@ -132,8 +133,7 @@ class TestRealAPIIntegration:
         response = await client.generate_response(
             system_prompt=system_prompt,
             messages=messages,
-            temperature=0.1,  # Low temperature for consistency
-            max_tokens=50
+            max_tokens=2048  # Increased to give GPT-5 room to generate content
         )
         
         assert isinstance(response, str)
@@ -155,7 +155,7 @@ class TestRealAPIIntegration:
             system_prompt=system_prompt,
             messages=messages,
             temperature=0.1,  # Low temperature for consistency
-            max_tokens=50
+            max_tokens=2048  # Increased to avoid truncation
         )
         
         assert isinstance(response, str)
