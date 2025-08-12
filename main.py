@@ -246,8 +246,8 @@ class RoundtableApp:
                 break
             else:
                 # Not final synthesis - allow space to continue or F to fast forward
-                prompt = "\n[Press Space to continue, F to fast forward to final synthesis...]"
-                user_input = input(prompt).strip().lower()
+                self.ui.console.print("\n[Press Space to continue, F to fast forward to final synthesis...]")
+                user_input = self.ui.get_single_keypress()
                 
                 if user_input == 'f':
                     # Fast forward to final synthesis
@@ -274,6 +274,12 @@ class RoundtableApp:
                     
                     # If no convergence round found, show message and continue normally
                     self.ui.console.print("[yellow]No final synthesis found in this session.[/yellow]")
+                    continue
+                elif user_input == ' ':
+                    # Space key - continue to next message (this is the normal flow)
+                    continue
+                else:
+                    # Any other key - treat as space and continue
                     continue
         
         # Show final consensus if available (for cases where we didn't fast forward)
