@@ -44,10 +44,9 @@ python main.py
 
 ## Session Management
 
-- Sessions are automatically saved to the `sessions/` directory
-- Autosave occurs after each turn
+- Sessions are automatically saved to the `sessions/` directory when discussions complete
 - Load and replay previous discussions from the main menu
-- Ctrl+C safely saves the current state before exiting
+- Ctrl+C exits the application
 
 ## Requirements
 

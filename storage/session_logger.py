@@ -97,33 +97,3 @@ class SessionLogger:
                 continue
         return sessions
     
-    def autosave(self, state: DiscussionState, filename: Optional[str] = None):
-        """Autosave current state"""
-        if filename:
-            filepath = self.sessions_dir / filename
-        else:
-            filepath = self.sessions_dir / f"autosave_{state.id}.json"
-        
-        session_data = {
-            "id": state.id,
-            "topic": state.topic,
-            "current_round": state.current_round.value,
-            "status": state.status,
-            "started_at": state.started_at.isoformat(),
-            "transcript": [
-                {
-                    "participant_id": msg.participant_id,
-                    "participant_model": msg.participant_model,
-                    "role": msg.role.value,
-                    "round": msg.round.value,
-                    "content": msg.content,
-                    "timestamp": msg.timestamp.isoformat(),
-                    "turn_number": msg.turn_number
-                }
-                for msg in state.transcript
-            ],
-            "round_metadata": state.round_metadata
-        }
-        
-        with open(filepath, 'w') as f:
-            json.dump(session_data, f, indent=2)
