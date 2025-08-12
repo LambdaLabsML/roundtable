@@ -21,7 +21,25 @@ import asyncio
 from datetime import datetime
 from unittest.mock import patch
 import logging
-from config import API_KEYS
+# Handle API keys for different environments (local vs CI/CD)
+import os
+from pathlib import Path
+
+# Check if .env file exists
+# Look for .env file in the project root (parent of tests directory)
+project_root = Path(__file__).parent.parent
+env_file_exists = (project_root / '.env').exists()
+
+if env_file_exists:
+    # Local development with .env file - import from config
+    from config import API_KEYS
+else:
+    # CI/CD or no .env file - use environment variables directly
+    API_KEYS = {
+        "anthropic": os.getenv("ANTHROPIC_API_KEY"),
+        "openai": os.getenv("OPENAI_API_KEY"),
+        "google": os.getenv("GOOGLE_API_KEY")
+    }
 
 # Configure logging for tests
 logging.basicConfig(level=logging.INFO)
