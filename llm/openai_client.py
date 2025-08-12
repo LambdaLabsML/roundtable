@@ -15,7 +15,7 @@ class GPTClient(LLMClient):
         if not OPENAI_AVAILABLE:
             raise ImportError("OpenAI library not installed. Run: pip install openai")
         
-        if not api_key or api_key == "your_openai_api_key_here":
+        if not api_key or api_key == "your_openai_api_key_here" or not api_key.startswith("sk-"):
             raise ValueError("Invalid OpenAI API key. Please check your .env file")
         
         try:

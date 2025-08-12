@@ -15,7 +15,7 @@ class GeminiClient(LLMClient):
         if not GOOGLE_AVAILABLE:
             raise ImportError("Google Generative AI library not installed. Run: pip install google-generativeai")
         
-        if not api_key or api_key == "your_google_api_key_here":
+        if not api_key or api_key == "your_google_api_key_here" or not api_key.startswith("AIza"):
             raise ValueError("Invalid Google API key. Please check your .env file")
         
         try:

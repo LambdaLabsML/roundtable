@@ -21,6 +21,7 @@ import asyncio
 from datetime import datetime
 from unittest.mock import patch
 import logging
+from config import API_KEYS
 
 # Configure logging for tests
 logging.basicConfig(level=logging.INFO)
@@ -36,8 +37,6 @@ def check_api_keys_available():
     required_keys = ["anthropic", "openai", "google"]
     missing_keys = []
     
-    from config import API_KEYS
-
     for key in required_keys:
         if not API_KEYS[key]:
             missing_keys.append(key)
@@ -70,7 +69,6 @@ class TestRealAPIIntegration:
     def test_real_anthropic_client_initialization(self):
         """Test real Anthropic client initialization with actual API key"""
         from llm.anthropic_client import ClaudeClient
-        from config import API_KEYS
         
         # Should not raise exception with real API key
         client = ClaudeClient(API_KEYS["anthropic"])
@@ -80,7 +78,6 @@ class TestRealAPIIntegration:
     def test_real_openai_client_initialization(self):
         """Test real OpenAI client initialization with actual API key"""
         from llm.openai_client import GPTClient
-        from config import API_KEYS
         
         # Should not raise exception with real API key
         client = GPTClient(API_KEYS["openai"])
@@ -90,7 +87,6 @@ class TestRealAPIIntegration:
     def test_real_google_client_initialization(self):
         """Test real Google client initialization with actual API key"""
         from llm.google_client import GeminiClient
-        from config import API_KEYS
         
         # Should not raise exception with real API key
         client = GeminiClient(API_KEYS["google"])
@@ -101,7 +97,6 @@ class TestRealAPIIntegration:
     async def test_real_anthropic_generate_response(self):
         """Test real Anthropic API call with simple prompt"""
         from llm.anthropic_client import ClaudeClient
-        from config import API_KEYS
         
         client = ClaudeClient(API_KEYS["anthropic"])
         
@@ -123,7 +118,6 @@ class TestRealAPIIntegration:
     async def test_real_openai_generate_response(self):
         """Test real OpenAI API call with simple prompt"""
         from llm.openai_client import GPTClient
-        from config import API_KEYS
         
         client = GPTClient(API_KEYS["openai"])
         
@@ -144,7 +138,6 @@ class TestRealAPIIntegration:
     async def test_real_google_generate_response(self):
         """Test real Google API call with simple prompt"""
         from llm.google_client import GeminiClient
-        from config import API_KEYS
         
         client = GeminiClient(API_KEYS["google"])
         
@@ -168,7 +161,6 @@ class TestRealAPIIntegration:
         from models.discussion import DiscussionState, Round, Role, Message
         from moderator.turn_manager import TurnManager
         from llm.anthropic_client import ClaudeClient
-        from config import API_KEYS
         import uuid
         
         # Initialize real client
@@ -238,7 +230,6 @@ class TestRealErrorHandling:
     async def test_real_api_error_handling(self):
         """Test handling of real API errors (rate limits, invalid requests)"""
         from llm.anthropic_client import ClaudeClient
-        from config import API_KEYS
         
         client = ClaudeClient(API_KEYS["anthropic"])
         

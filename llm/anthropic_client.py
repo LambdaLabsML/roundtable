@@ -15,7 +15,7 @@ class ClaudeClient(LLMClient):
         if not ANTHROPIC_AVAILABLE:
             raise ImportError("Anthropic library not installed. Run: pip install anthropic")
         
-        if not api_key or api_key == "your_anthropic_api_key_here":
+        if not api_key or api_key == "your_anthropic_api_key_here" or not api_key.startswith("sk-ant-"):
             raise ValueError("Invalid Anthropic API key. Please check your .env file")
         
         try:

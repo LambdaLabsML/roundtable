@@ -219,13 +219,13 @@ def test_llm_client_initialization_mocked(mock_gemini_model, mock_gemini_config,
     from llm.google_client import GeminiClient
     
     # These should not raise errors with valid keys
-    claude = ClaudeClient("valid_key")
+    claude = ClaudeClient("sk-ant-api03-valid-key-for-testing")
     assert claude.client is not None
     
-    gpt = GPTClient("valid_key")
+    gpt = GPTClient("sk-valid-key-for-testing")
     assert gpt.client is not None
     
-    gemini = GeminiClient("valid_key")
+    gemini = GeminiClient("AIza-valid-key-for-testing")
     assert gemini.model is not None
 
 def test_config_loading():
