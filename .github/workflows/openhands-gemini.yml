@@ -24,7 +24,7 @@ jobs:
       macro: ${{ vars.OPENHANDS_MACRO || '@openhands-gemini' }}
       max_iterations: ${{ fromJson(vars.OPENHANDS_MAX_ITER || 50) }}
       base_container_image: ${{ vars.OPENHANDS_BASE_CONTAINER_IMAGE || '' }}
-      LLM_MODEL: ${{ 'gemini/gemini-2.5-pro' }}
+      LLM_MODEL: ${{ 'gemini-2.5-pro' }}
       target_branch: ${{ vars.TARGET_BRANCH || 'main' }}
       runner: ${{ vars.TARGET_RUNNER }}
     secrets:
