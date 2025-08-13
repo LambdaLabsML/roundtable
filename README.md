@@ -46,6 +46,10 @@ python main.py
 
 - Sessions are automatically saved to the `sessions/` directory when discussions complete
 - Load and replay previous discussions from the main menu
+- **Session Replay Hotkeys:**
+  - **Space**: Continue to next message (single keypress)
+  - **F**: Fast forward to final synthesis (single keypress)
+  - **Enter**: Return to main menu (from final synthesis page)
 - Ctrl+C exits the application
 
 ## Requirements
