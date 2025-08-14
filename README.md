@@ -35,6 +35,24 @@ Run the application:
 python main.py
 ```
 
+
+## Fix an issue using OpenHands Agent
+
+You can also use OpenHands agent to fix an issue for you. To trigger the agent, you can leave a comment in the issue thread, with the following format:
+
+`@<agent-name> fix this issue`
+
+For example, to use `openhands-claude` to fix an issue, you can leave a comment like this:
+
+`@openhands-claude fix this issue`
+
+The available agents are:
+- `openhands-claude`
+- `openhands-gemini`
+- `openhands-gpt`
+
+The GitHub actions for these agents are located in `.github/workflows`.
+
 ## Discussion Structure
 
 1. **Round 0 - Agenda Framing**: Moderator introduces the topic

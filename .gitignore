@@ -33,4 +33,4 @@ sessions/
 # Build
 build/
 dist/
-*.egg-info/
+*.egg-info/storage
