@@ -65,6 +65,51 @@ If you encounter API errors:
 2. Check your API rate limits and quotas
 3. The app will automatically retry failed requests with exponential backoff
 
+## Using OpenHands Agents to Fix Issues
+
+This repository is equipped with automated OpenHands agents that can help fix issues and implement features. Three different agents are available, each powered by different AI models:
+
+### Available Agents
+
+- **@openhands-claude** - Powered by Anthropic's Claude Sonnet 4
+- **@openhands-gemini** - Powered by Google's Gemini 2.5 Pro
+- **@openhands-gpt** - Powered by OpenAI's GPT-5
+
+### How to Use
+
+To request an agent to work on an issue, simply mention the agent in a comment on any GitHub issue or pull request:
+
+```
+@openhands-claude fix this issue
+```
+
+```
+@openhands-gemini please implement this feature
+```
+
+```
+@openhands-gpt help resolve this bug
+```
+
+### Agent Capabilities
+
+The OpenHands agents can:
+- Analyze code and identify bugs
+- Implement new features
+- Write and run tests
+- Update documentation
+- Create pull requests with fixes
+- Respond to code review feedback
+
+### Configuration
+
+The agents are configured through GitHub Actions workflows located in `.github/workflows/`:
+- `openhands-claude.yml` - Claude agent configuration
+- `openhands-gemini.yml` - Gemini agent configuration
+- `openhands-gpt.yml` - GPT agent configuration
+
+Each agent runs with appropriate permissions to read issues, create branches, and submit pull requests.
+
 ## Notes
 
 - Uses GPT-5 (gpt-5-2025-08-07)
