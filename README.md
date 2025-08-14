@@ -70,3 +70,14 @@ If you encounter API errors:
 - Uses GPT-5 (gpt-5-2025-08-07)
 - Gemini 2.5 Pro falls back to Gemini Pro if not available
 - Discussion time varies based on API response times (typically 5-10 minutes)
+
+## Fix issues with OpenHands
+
+This repo is integrated with OpenHands, a Github action that can fix issues in the repo for you.
+
+To use it, you can create a new issue in the repo, and in the issue description, tag `@openhands-bot` and ask it to fix the issue.
+For example, you can create an issue with the following description:
+```
+@openhands-bot please fix this issue
+```
+
