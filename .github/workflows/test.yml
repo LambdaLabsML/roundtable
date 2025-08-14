@@ -9,10 +9,10 @@ on:
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
-    runs-on: macos-latest
+        runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.13']
+                python-version: ['3.12']
 
     # EXPOSE SECRETS AS ENV VARS (job-wide)
     env:
