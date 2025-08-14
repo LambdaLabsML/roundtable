@@ -18,10 +18,10 @@ permissions:
   issues: write
 
 jobs:
-  call-openhands-openai:
+  call-openhands-gpt:
     uses: All-Hands-AI/OpenHands/.github/workflows/openhands-resolver.yml@main
     with:
-      macro: ${{ vars.OPENHANDS_MACRO || '@openhands-openai' }}
+      macro: ${{ vars.OPENHANDS_MACRO || '@openhands-gpt' }}
       max_iterations: ${{ fromJson(vars.OPENHANDS_MAX_ITER || 50) }}
       base_container_image: ${{ vars.OPENHANDS_BASE_CONTAINER_IMAGE || '' }}
       LLM_MODEL: ${{ 'gpt-5-2025-08-07' }}
