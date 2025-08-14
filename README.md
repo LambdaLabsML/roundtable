@@ -1,4 +1,4 @@
-# Roundtable - LLM Socratic Discussion Platform
+# Roundtable - LLM Socratic Discussion
 
 A Python terminal application that orchestrates structured, truth-seeking discussions between multiple LLMs.
 
