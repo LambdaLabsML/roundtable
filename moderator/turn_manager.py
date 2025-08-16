@@ -4,7 +4,7 @@ import random
 
 class TurnManager:
     def __init__(self):
-        self.panelist_ids = ["gpt5", "claude", "gemini"]
+        self.panelist_ids = ["gpt5", "claude", "gemini", "deepseek"]
         self.moderator_id = "claude_moderator"
     
     def determine_next_speaker(self, state: DiscussionState) -> str:
