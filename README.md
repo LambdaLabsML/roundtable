@@ -74,6 +74,7 @@ This repository is equipped with automated OpenHands agents that can help fix is
 - **@openhands-claude** - Powered by Anthropic's Claude Sonnet 4
 - **@openhands-gemini** - Powered by Google's Gemini 2.5 Pro
 - **@openhands-gpt** - Powered by OpenAI's GPT-5
+- **@openhands-lambda-deepseek70b** - Powered by DeepSeek 70B
 
 ### How to Use
 
@@ -89,6 +90,10 @@ To request an agent to work on an issue, simply mention the agent in a comment o
 
 ```
 @openhands-gpt help resolve this bug
+```
+
+```
+@openhands-lambda-deepseek70b please assist with this task
 ```
 
 ### Agent Capabilities
@@ -107,6 +112,7 @@ The agents are configured through GitHub Actions workflows located in `.github/w
 - `openhands-claude.yml` - Claude agent configuration
 - `openhands-gemini.yml` - Gemini agent configuration
 - `openhands-gpt.yml` - GPT agent configuration
+- `openhands-lambda-deepseek70b.yml` - DeepSeek 70B agent configuration
 
 Each agent runs with appropriate permissions to read issues, create branches, and submit pull requests.
 
