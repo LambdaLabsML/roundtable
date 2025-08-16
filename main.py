@@ -6,6 +6,7 @@ from models.discussion import DiscussionState, Round, Message, Role
 from llm.anthropic_client import ClaudeClient
 from llm.openai_client import GPTClient
 from llm.google_client import GeminiClient
+from llm.lambda_client import LambdaClient
 from moderator.turn_manager import TurnManager
 from ui.terminal import TerminalUI
 from storage.session_logger import SessionLogger
@@ -29,7 +30,8 @@ class RoundtableApp:
                 "claude_moderator": ClaudeClient(API_KEYS["anthropic"]),
                 "claude": ClaudeClient(API_KEYS["anthropic"]),
                 "gpt5": GPTClient(API_KEYS["openai"]),
-                "gemini": GeminiClient(API_KEYS["google"])
+                "gemini": GeminiClient(API_KEYS["google"]),
+                "deepseek": LambdaClient(API_KEYS["lambda"])
             }
         except Exception as e:
             self.ui.console.print(f"[red]Error initializing LLM clients: {e}[/red]")
@@ -40,7 +42,8 @@ class RoundtableApp:
             "claude_moderator": "Claude 4.1 Opus",
             "claude": "Claude 4.1 Opus",
             "gpt5": "GPT-5 Thinking",
-            "gemini": "Gemini 2.5 Pro"
+            "gemini": "Gemini 2.5 Pro",
+            "deepseek": "DeepSeek-Llama3.3-70B"
         }
         
         self.current_session_file = None

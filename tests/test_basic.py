@@ -87,6 +87,7 @@ def test_turn_manager_initialization():
     assert "gpt5" in manager.panelist_ids
     assert "claude" in manager.panelist_ids
     assert "gemini" in manager.panelist_ids
+    assert "deepseek" in manager.panelist_ids
 
 def test_turn_manager_agenda_speaker():
     """Test that moderator speaks first in agenda round"""
@@ -218,6 +219,7 @@ def test_llm_client_initialization_mocked(mock_gemini_model, mock_gemini_config,
     from llm.anthropic_client import ClaudeClient
     from llm.openai_client import GPTClient
     from llm.google_client import GeminiClient
+    from llm.lambda_client import LambdaClient
     
     # These should not raise errors with valid keys
     claude = ClaudeClient("sk-ant-api03-valid-key-for-testing")
@@ -229,6 +231,11 @@ def test_llm_client_initialization_mocked(mock_gemini_model, mock_gemini_config,
     gemini = GeminiClient("AIza-valid-key-for-testing")
     assert gemini.model is not None
 
+    # Test Lambda client initialization
+    lambda_client = LambdaClient("lambda-valid-key-for-testing")
+    assert lambda_client.api_key == "lambda-valid-key-for-testing"
+    assert lambda_client.model == "deepseek-llama3.3-70b"
+
 def test_config_loading():
     """Test configuration loading"""
     import os
@@ -238,7 +245,8 @@ def test_config_loading():
     with patch.dict(os.environ, {
         'ANTHROPIC_API_KEY': 'test_anthropic',
         'OPENAI_API_KEY': 'test_openai',
-        'GOOGLE_API_KEY': 'test_google'
+        'GOOGLE_API_KEY': 'test_google',
+        'LAMBDA_API_KEY': 'test_lambda'
     }):
         # Reimport config to get mocked values
         import importlib
@@ -248,3 +256,118 @@ def test_config_loading():
         assert config.API_KEYS['anthropic'] == 'test_anthropic'
         assert config.API_KEYS['openai'] == 'test_openai'
         assert config.API_KEYS['google'] == 'test_google'
+        assert config.API_KEYS['lambda'] == 'test_lambda'
+
+@pytest.mark.mock_api
+@patch('requests.post')
+def test_lambda_client_generate_response(mock_post):
+    """Test Lambda client response generation with mocked HTTP requests"""
+    from llm.lambda_client import LambdaClient
+    import asyncio
+
+    # Mock successful response
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "choices": [
+            {
+                "message": {
+                    "content": "This is a test response from DeepSeek"
+                }
+            }
+        ]
+    }
+    mock_post.return_value = mock_response
+
+    # Test client
+    client = LambdaClient("test-lambda-key")
+
+    # Test response generation
+    async def test_generate():
+        response = await client.generate_response(
+            system_prompt="You are a helpful assistant",
+            messages=[{"role": "user", "content": "Hello"}],
+            temperature=0.7,
+            max_tokens=100
+        )
+        return response
+
+    result = asyncio.run(test_generate())
+    assert result == "This is a test response from DeepSeek"
+
+    # Verify the request was made correctly
+    mock_post.assert_called_once()
+    call_args = mock_post.call_args
+    assert call_args[0][0] == "https://api.lambda.ai/v1/chat/completions"
+    assert call_args[1]["headers"]["Authorization"] == "Bearer test-lambda-key"
+    assert call_args[1]["json"]["model"] == "deepseek-llama3.3-70b"
+
+def test_deepseek_integration_in_discussion():
+    """Test that DeepSeek is properly integrated into the discussion flow"""
+    from moderator.turn_manager import TurnManager
+    from models.discussion import DiscussionState, Round, Message, Role
+
+    manager = TurnManager()
+    state = DiscussionState(
+        id="test",
+        topic="AI Ethics",
+        current_round=Round.EVIDENCE,
+        current_speaker=None,
+        turn_order=[],
+        transcript=[],
+        round_metadata={},
+        status="in_progress",
+        started_at=datetime.now(),
+        completed_at=None
+    )
+
+    # Simulate other participants having spoken
+    state.transcript.extend([
+        Message(
+            participant_id="gpt5",
+            participant_model="GPT-5",
+            role=Role.PANELIST,
+            round=Round.EVIDENCE,
+            content="GPT-5 evidence",
+            timestamp=datetime.now(),
+            turn_number=0
+        ),
+        Message(
+            participant_id="claude",
+            participant_model="Claude",
+            role=Role.PANELIST,
+            round=Round.EVIDENCE,
+            content="Claude evidence",
+            timestamp=datetime.now(),
+            turn_number=1
+        ),
+        Message(
+            participant_id="gemini",
+            participant_model="Gemini",
+            role=Role.PANELIST,
+            round=Round.EVIDENCE,
+            content="Gemini evidence",
+            timestamp=datetime.now(),
+            turn_number=2
+        )
+    ])
+
+    # DeepSeek should be able to speak next
+    next_speaker = manager.determine_next_speaker(state)
+    assert next_speaker == "deepseek"
+
+    # Add DeepSeek's message
+    state.transcript.append(
+        Message(
+            participant_id="deepseek",
+            participant_model="DeepSeek-Llama3.3-70B",
+            role=Role.PANELIST,
+            round=Round.EVIDENCE,
+            content="DeepSeek evidence",
+            timestamp=datetime.now(),
+            turn_number=3
+        )
+    )
+
+    # Now all panelists have spoken, should advance round
+    assert manager.should_advance_round(state)

@@ -4,7 +4,7 @@ A Python terminal application that orchestrates structured, truth-seeking discus
 
 ## Features
 - Structured 4-round Socratic discussions
-- Three AI panelists (GPT-5, Claude 4.1, Gemini 2.5 Pro) with a Claude moderator
+- Four AI panelists (GPT-5, Claude 4.1, Gemini 2.5 Pro, DeepSeek-Llama3.3-70B) with a Claude moderator
 - Automatic session saving and replay functionality
 - Clean terminal UI with rich formatting
 - Graceful error handling and interruption support
@@ -55,7 +55,7 @@ python main.py
 ## Requirements
 
 - Python 3.8+
-- API keys for Anthropic, OpenAI, and Google AI
+- API keys for Anthropic, OpenAI, Google AI, and Lambda AI
 - Terminal with Unicode support for best display
 
 ## Troubleshooting
