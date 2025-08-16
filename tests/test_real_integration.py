@@ -5,6 +5,8 @@ These tests require real API keys to be set in environment variables:
 - ANTHROPIC_API_KEY
 - OPENAI_API_KEY  
 - GOOGLE_API_KEY
+- LAMBDA_API_KEY
+
 
 Set SKIP_REAL_TESTS=1 to skip these tests if API keys are not available.
 """
@@ -38,7 +40,8 @@ else:
     API_KEYS = {
         "anthropic": os.getenv("ANTHROPIC_API_KEY"),
         "openai": os.getenv("OPENAI_API_KEY"),
-        "google": os.getenv("GOOGLE_API_KEY")
+        "google": os.getenv("GOOGLE_API_KEY"),
+        "lambda": os.getenv("LAMBDA_API_KEY"),
     }
 
 # Configure logging for tests
@@ -52,7 +55,7 @@ def pytest_configure(config):
 
 def check_api_keys_available():
     """Check if real API keys are available for testing"""
-    required_keys = ["anthropic", "openai", "google"]
+    required_keys = ["anthropic", "openai", "google", "lambda"]
     missing_keys = []
     
     for key in required_keys:
@@ -111,6 +114,13 @@ class TestRealAPIIntegration:
         assert client.model is not None
         assert hasattr(client.model, 'generate_content')
     
+    def test_real_lambda_client_initialization(self):
+        """Test real Lambda client initialization with actual API key"""
+        from llm.lambda_client import LambdaClient
+        client = LambdaClient(API_KEYS["lambda"])
+        assert client.client is not None
+        assert hasattr(client.client, 'chat')
+
     @pytest.mark.asyncio
     async def test_real_anthropic_generate_response(self):
         """Test real Anthropic API call with simple prompt"""
@@ -162,6 +172,24 @@ class TestRealAPIIntegration:
         system_prompt = "You are a helpful assistant. Respond briefly."
         messages = [{"role": "user", "content": "Say hello in exactly 3 words."}]
         
+
+    @pytest.mark.asyncio
+    async def test_real_lambda_generate_response(self):
+        """Test real Lambda API call with simple prompt"""
+        from llm.lambda_client import LambdaClient
+        client = LambdaClient(API_KEYS["lambda"])
+        system_prompt = "You are a helpful assistant. Respond briefly."
+        messages = [{"role": "user", "content": "Say hello in exactly 3 words."}]
+        response = await client.generate_response(
+            system_prompt=system_prompt,
+            messages=messages,
+            temperature=0.1,
+            max_tokens=128,
+        )
+        assert isinstance(response, str)
+        assert len(response.strip()) > 0
+        assert len(response.split()) <= 10
+
         response = await client.generate_response(
             system_prompt=system_prompt,
             messages=messages,

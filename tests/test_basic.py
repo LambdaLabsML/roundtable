@@ -88,6 +88,8 @@ def test_turn_manager_initialization():
     assert "claude" in manager.panelist_ids
     assert "gemini" in manager.panelist_ids
 
+    assert "deepseek" in manager.panelist_ids
+
 def test_turn_manager_agenda_speaker():
     """Test that moderator speaks first in agenda round"""
     from moderator.turn_manager import TurnManager
@@ -218,6 +220,7 @@ def test_llm_client_initialization_mocked(mock_gemini_model, mock_gemini_config,
     from llm.anthropic_client import ClaudeClient
     from llm.openai_client import GPTClient
     from llm.google_client import GeminiClient
+    from llm.lambda_client import LambdaClient
     
     # These should not raise errors with valid keys
     claude = ClaudeClient("sk-ant-api03-valid-key-for-testing")
@@ -228,6 +231,9 @@ def test_llm_client_initialization_mocked(mock_gemini_model, mock_gemini_config,
     
     gemini = GeminiClient("AIza-valid-key-for-testing")
     assert gemini.model is not None
+
+    deepseek = LambdaClient("lambda-valid-key-for-testing")
+    assert deepseek.client is not None
 
 def test_config_loading():
     """Test configuration loading"""
