@@ -87,6 +87,7 @@ def test_turn_manager_initialization():
     assert "gpt5" in manager.panelist_ids
     assert "claude" in manager.panelist_ids
     assert "gemini" in manager.panelist_ids
+    assert "deepseek" in manager.panelist_ids
 
 def test_turn_manager_agenda_speaker():
     """Test that moderator speaks first in agenda round"""
@@ -218,6 +219,7 @@ def test_llm_client_initialization_mocked(mock_gemini_model, mock_gemini_config,
     from llm.anthropic_client import ClaudeClient
     from llm.openai_client import GPTClient
     from llm.google_client import GeminiClient
+    from llm.lambda_client import LambdaClient
     
     # These should not raise errors with valid keys
     claude = ClaudeClient("sk-ant-api03-valid-key-for-testing")
@@ -228,6 +230,9 @@ def test_llm_client_initialization_mocked(mock_gemini_model, mock_gemini_config,
     
     gemini = GeminiClient("AIza-valid-key-for-testing")
     assert gemini.model is not None
+    
+    lambda_client = LambdaClient("lambda-valid-key-for-testing")
+    assert lambda_client.client is not None
 
 def test_config_loading():
     """Test configuration loading"""
@@ -238,7 +243,8 @@ def test_config_loading():
     with patch.dict(os.environ, {
         'ANTHROPIC_API_KEY': 'test_anthropic',
         'OPENAI_API_KEY': 'test_openai',
-        'GOOGLE_API_KEY': 'test_google'
+        'GOOGLE_API_KEY': 'test_google',
+        'LAMBDA_API_KEY': 'test_lambda'
     }):
         # Reimport config to get mocked values
         import importlib
@@ -248,3 +254,4 @@ def test_config_loading():
         assert config.API_KEYS['anthropic'] == 'test_anthropic'
         assert config.API_KEYS['openai'] == 'test_openai'
         assert config.API_KEYS['google'] == 'test_google'
+        assert config.API_KEYS['lambda'] == 'test_lambda'
