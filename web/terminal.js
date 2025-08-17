@@ -17,7 +17,7 @@ class WebTerminal {
     init() {
         this.setupEventListeners();
         this.connect();
-        this.showWelcome();
+        // showWelcome() will be called after connection is established
     }
     
     setupEventListeners() {
@@ -40,27 +40,35 @@ class WebTerminal {
     
     connect() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        const wsUrl = `${protocol}//${host}/ws`;
+        const hostname = window.location.hostname;
+        const wsUrl = `${protocol}//${hostname}:8000/ws`;
+        
+        console.log('Attempting to connect to WebSocket:', wsUrl);
+        this.appendOutput(`Connecting to ${wsUrl}...`, 'system-message');
         
         this.socket = new WebSocket(wsUrl);
         
         this.socket.onopen = () => {
+            console.log('WebSocket connection established');
             this.isConnected = true;
             this.appendOutput('Connected to Roundtable server', 'system-message');
+            this.showWelcome();
         };
         
         this.socket.onmessage = (event) => {
+            console.log('Received message:', event.data);
             const data = JSON.parse(event.data);
             this.handleServerMessage(data);
         };
         
-        this.socket.onclose = () => {
+        this.socket.onclose = (event) => {
+            console.log('WebSocket connection closed:', event.code, event.reason);
             this.isConnected = false;
-            this.appendOutput('Disconnected from server', 'error-message');
+            this.appendOutput(`Disconnected from server (code: ${event.code})`, 'error-message');
         };
         
         this.socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
             this.appendOutput('Connection error: ' + error, 'error-message');
         };
     }
@@ -140,7 +148,7 @@ class WebTerminal {
     
     executeCommand() {
         const command = this.input.value.trim();
-        if (!command) return;
+        // Always send the command, even if empty (for Enter key handling)
         
         // Add to history
         this.commandHistory.push(command);
@@ -153,12 +161,16 @@ class WebTerminal {
         this.input.value = '';
         
         // Send to server
+        console.log('Executing command:', command, 'Connected:', this.isConnected);
         if (this.isConnected) {
-            this.socket.send(JSON.stringify({
+            const message = JSON.stringify({
                 type: 'command',
                 command: command
-            }));
+            });
+            console.log('Sending message to server:', message);
+            this.socket.send(message);
         } else {
+            console.log('Not connected to server, cannot send command');
             this.appendOutput('Not connected to server', 'error-message');
         }
     }
@@ -256,6 +268,7 @@ class WebTerminal {
     }
     
     displayMenu() {
+        this.setPrompt('$ ');
         this.showWelcome();
     }
     

@@ -31,16 +31,18 @@ class WebSocketManager:
     def __init__(self):
         self.clients: Set[WebSocketServerProtocol] = set()
         self.current_session: Optional['WebRoundtableSession'] = None
+        self.client_states: dict = {}  # Track state for each client
+        
+    def _get_client_key(self, websocket: WebSocketServerProtocol) -> str:
+        """Get a stable key for the websocket"""
+        return f"{websocket.remote_address[0]}:{websocket.remote_address[1]}"
         
     async def register_client(self, websocket: WebSocketServerProtocol):
         """Register a new WebSocket client"""
         self.clients.add(websocket)
         logger.info(f"Client {websocket.remote_address} connected")
         
-        # Send welcome menu to new client
-        await self.send_to_client(websocket, {
-            'type': 'menu'
-        })
+        # Don't send menu automatically - let client handle initial display
     
     async def unregister_client(self, websocket: WebSocketServerProtocol):
         """Unregister a WebSocket client"""
@@ -106,7 +108,9 @@ class WebRoundtableSession:
                 missing_keys.append(service.upper())
         
         if missing_keys:
-            raise Exception(f"Missing API keys: {', '.join(missing_keys)}")
+            logger.warning(f"Missing API keys: {', '.join(missing_keys)}")
+            logger.warning("Please set up your API keys in a .env file")
+            raise Exception(f"Missing API keys: {', '.join(missing_keys)}. Please create a .env file with your API keys.")
     
     def load_prompts(self) -> tuple[str, str]:
         """Load prompt templates"""
@@ -261,6 +265,19 @@ class WebRoundtableSession:
                     # Save final state
                     saved_path = self.logger.save_session(self.current_state)
                     await self.ui.send_output(f"Discussion saved to: {saved_path}")
+                    
+                    # Return to main menu
+                    await self.ui.send_output("", "")
+                    await self.ui.send_output("Press Enter to return to main menu...", "system-message")
+                    
+                    # Clear the current session
+                    self.ws_manager.current_session = None
+                    
+                    # Reset prompt to default
+                    await ws_manager.send_to_client(websocket, {
+                        'type': 'prompt',
+                        'prompt': '$ '
+                    })
                 else:
                     # Advance to next round
                     old_round = self.current_state.current_round
@@ -272,8 +289,141 @@ async def handle_client_message(websocket: WebSocketServerProtocol, message: dic
     """Handle incoming client messages"""
     try:
         command = message.get('command', '').strip()
+        client_key = ws_manager._get_client_key(websocket)
+        current_state = ws_manager.client_states.get(client_key, 'main_menu')
+        print(f"DEBUG: Received command '{command}' from {websocket.remote_address}, current state: {current_state}")
+        logger.info(f"Received command '{command}' from {websocket.remote_address}, current state: {current_state}")
         
-        if command == '1':
+        if command.isdigit():
+            print(f"DEBUG: Command '{command}' is digit, checking session selection condition")
+            client_key = ws_manager._get_client_key(websocket)
+            current_state = ws_manager.client_states.get(client_key, 'main_menu')
+            print(f"DEBUG: Client key: {client_key}, Current state: {current_state}")
+            print(f"DEBUG: command.isdigit() = {command.isdigit()}")
+            print(f"DEBUG: current_state == 'session_selection' = {current_state == 'session_selection'}")
+            if current_state == 'session_selection':
+                # Session selection
+                print(f"DEBUG: Processing session selection: {command} for {websocket.remote_address}")
+                logger.info(f"Processing session selection: {command} for {websocket.remote_address}")
+                session_logger = SessionLogger() 
+                sessions = session_logger.list_sessions()
+                idx = int(command) - 1
+                
+                if 0 <= idx < len(sessions):
+                    state = session_logger.load_session(sessions[idx][0])
+                    if state:
+                        # Replay session (simplified for web)
+                        await ws_manager.send_to_client(websocket, {
+                            'type': 'clear'
+                        })
+                        
+                        await ws_manager.send_to_client(websocket, {
+                            'type': 'header',
+                            'topic': state.topic,
+                            'round': 'Replay'
+                        })
+                        
+                        for msg in state.transcript:
+                            await ws_manager.send_to_client(websocket, {
+                                'type': 'message',
+                                'participant_id': msg.participant_id,
+                                'participant_model': msg.participant_model,
+                                'content': msg.content,
+                                'is_moderator': msg.role == Role.MODERATOR
+                            })
+                        
+                        await ws_manager.send_to_client(websocket, {
+                            'type': 'output',
+                            'content': '\nPress Enter to return to menu...',
+                            'style': 'system-message'
+                        })
+                        
+                        # Set state to waiting for Enter to return to menu
+                        client_key = ws_manager._get_client_key(websocket)
+                        ws_manager.client_states[client_key] = 'waiting_for_enter'
+                        print(f"DEBUG: Session loaded, state set to waiting_for_enter for {websocket.remote_address}")
+                else:
+                    await ws_manager.send_to_client(websocket, {
+                        'type': 'output',
+                        'content': 'Invalid selection.',
+                        'style': 'error-message'
+                    })
+                    
+                    # Reset client state on invalid selection
+                    client_key = ws_manager._get_client_key(websocket)
+                    ws_manager.client_states[client_key] = 'main_menu'
+            else:
+                # Not in session selection mode, treat as main menu command
+                print(f"DEBUG: Command '{command}' is digit but not in session_selection mode, treating as main menu")
+                if command == '1':
+                    # Start new discussion
+                    await ws_manager.send_to_client(websocket, {
+                        'type': 'output',
+                        'content': 'Enter discussion topic:',
+                        'style': 'system-message'
+                    })
+                    await ws_manager.send_to_client(websocket, {
+                        'type': 'prompt',
+                        'prompt': 'Topic: '
+                    })
+                elif command == '2':
+                    # Load previous discussion
+                    session_logger = SessionLogger()
+                    sessions = session_logger.list_sessions()
+                    
+                    if not sessions:
+                        await ws_manager.send_to_client(websocket, {
+                            'type': 'output',
+                            'content': 'No saved sessions found.',
+                            'style': 'system-message'
+                        })
+                        await ws_manager.send_to_client(websocket, {
+                            'type': 'menu'
+                        })
+                    else:
+                        # Set client state to session selection mode
+                        client_key = ws_manager._get_client_key(websocket)
+                        ws_manager.client_states[client_key] = 'session_selection'
+                        print(f"DEBUG: Client state set to session_selection for {websocket.remote_address}")
+                        logger.info(f"Client state set to session_selection for {websocket.remote_address}")
+                        
+                        await ws_manager.send_to_client(websocket, {
+                            'type': 'output',
+                            'content': 'Saved Sessions:',
+                            'style': 'system-message'
+                        })
+                        
+                        for i, (filename, topic, timestamp) in enumerate(sessions[:10]):
+                            await ws_manager.send_to_client(websocket, {
+                                'type': 'output',
+                                'content': f"{i+1}. [{timestamp[:10]}] {topic}",
+                                'style': 'menu-option'
+                            })
+                        
+                        await ws_manager.send_to_client(websocket, {
+                            'type': 'output',
+                            'content': "Select session number (or 'c' to cancel):",
+                            'style': 'system-message'
+                        })
+                elif command == '3':
+                    # Exit
+                    await ws_manager.send_to_client(websocket, {
+                        'type': 'output',
+                        'content': 'Thank you for using Roundtable!',
+                        'style': 'system-message'
+                    })
+                    await websocket.close()
+                else:
+                    await ws_manager.send_to_client(websocket, {
+                        'type': 'output',
+                        'content': f'Unknown command: {command}',
+                        'style': 'error-message'
+                    })
+                    await ws_manager.send_to_client(websocket, {
+                        'type': 'menu'
+                    })
+        
+        elif command == '1':
             # Start new discussion
             await ws_manager.send_to_client(websocket, {
                 'type': 'output',
@@ -300,6 +450,12 @@ async def handle_client_message(websocket: WebSocketServerProtocol, message: dic
                     'type': 'menu'
                 })
             else:
+                # Set client state to session selection mode
+                client_key = ws_manager._get_client_key(websocket)
+                ws_manager.client_states[client_key] = 'session_selection'
+                print(f"DEBUG: Client state set to session_selection for {websocket.remote_address}")
+                logger.info(f"Client state set to session_selection for {websocket.remote_address}")
+                
                 await ws_manager.send_to_client(websocket, {
                     'type': 'output',
                     'content': 'Saved Sessions:',
@@ -329,17 +485,30 @@ async def handle_client_message(websocket: WebSocketServerProtocol, message: dic
             await websocket.close()
             
         elif command == 'help':
+            client_key = ws_manager._get_client_key(websocket)
+            ws_manager.client_states[client_key] = 'main_menu'
             await ws_manager.send_to_client(websocket, {
                 'type': 'menu'
             })
             
         elif command.startswith('Topic: '):
-            # Extract topic and start discussion
+            # Extract topic and start discussion (legacy format)
             topic = command[7:].strip()
             if topic:
-                session = WebRoundtableSession(ws_manager)
-                ws_manager.current_session = session
-                await session.run_discussion(topic)
+                try:
+                    session = WebRoundtableSession(ws_manager)
+                    ws_manager.current_session = session
+                    await session.run_discussion(topic)
+                except Exception as e:
+                    logger.error(f"Error creating session: {e}")
+                    await ws_manager.send_to_client(websocket, {
+                        'type': 'output',
+                        'content': f'Error starting discussion: {str(e)}',
+                        'style': 'error-message'
+                    })
+                    await ws_manager.send_to_client(websocket, {
+                        'type': 'menu'
+                    })
             else:
                 await ws_manager.send_to_client(websocket, {
                     'type': 'output',
@@ -347,58 +516,62 @@ async def handle_client_message(websocket: WebSocketServerProtocol, message: dic
                     'style': 'error-message'
                 })
         
-        elif command.isdigit() and ws_manager.current_session is None:
-            # Session selection
-            session_logger = SessionLogger() 
-            sessions = session_logger.list_sessions()
-            idx = int(command) - 1
-            
-            if 0 <= idx < len(sessions):
-                state = session_logger.load_session(sessions[idx][0])
-                if state:
-                    # Replay session (simplified for web)
-                    await ws_manager.send_to_client(websocket, {
-                        'type': 'clear'
-                    })
-                    
-                    await ws_manager.send_to_client(websocket, {
-                        'type': 'header',
-                        'topic': state.topic,
-                        'round': 'Replay'
-                    })
-                    
-                    for msg in state.transcript:
-                        await ws_manager.send_to_client(websocket, {
-                            'type': 'message',
-                            'participant_id': msg.participant_id,
-                            'participant_model': msg.participant_model,
-                            'content': msg.content,
-                            'is_moderator': msg.role == Role.MODERATOR
-                        })
-                    
+
+        
+        elif ws_manager.current_session is None and len(command) > 0 and not command.isdigit() and command not in ['1', '2', '3', 'help', 'c'] and ws_manager.client_states.get(ws_manager._get_client_key(websocket)) != 'session_selection':
+            # Handle topic input directly (when not in a session and not a menu command)
+            topic = command.strip()
+            if topic:
+                try:
+                    session = WebRoundtableSession(ws_manager)
+                    ws_manager.current_session = session
+                    await session.run_discussion(topic)
+                except Exception as e:
+                    logger.error(f"Error creating session: {e}")
                     await ws_manager.send_to_client(websocket, {
                         'type': 'output',
-                        'content': '\nPress Enter to return to menu...',
-                        'style': 'system-message'
+                        'content': f'Error starting discussion: {str(e)}',
+                        'style': 'error-message'
+                    })
+                    await ws_manager.send_to_client(websocket, {
+                        'type': 'menu'
                     })
             else:
                 await ws_manager.send_to_client(websocket, {
                     'type': 'output',
-                    'content': 'Invalid selection.',
+                    'content': 'Please enter a valid topic.',
                     'style': 'error-message'
                 })
         
         elif command.lower() == 'c':
             # Cancel - return to menu
+            client_key = ws_manager._get_client_key(websocket)
+            ws_manager.client_states[client_key] = 'main_menu'
             await ws_manager.send_to_client(websocket, {
                 'type': 'menu'
             })
             
         elif not command:
-            # Enter pressed - return to menu (for replay mode)
-            await ws_manager.send_to_client(websocket, {
-                'type': 'menu'
-            })
+            # Enter pressed - return to menu (for replay mode or after discussion completion)
+            print(f"DEBUG: Empty command received (Enter pressed) from {websocket.remote_address}")
+            client_key = ws_manager._get_client_key(websocket)
+            current_state = ws_manager.client_states.get(client_key, 'main_menu')
+            print(f"DEBUG: Current state when Enter pressed: {current_state}")
+            
+            if current_state == 'waiting_for_enter':
+                # User pressed Enter after viewing a session, return to main menu
+                print(f"DEBUG: User pressed Enter in waiting_for_enter state, returning to main menu")
+                ws_manager.client_states[client_key] = 'main_menu'
+                await ws_manager.send_to_client(websocket, {
+                    'type': 'menu'
+                })
+            else:
+                # Default behavior for Enter in other states
+                print(f"DEBUG: User pressed Enter in {current_state} state, returning to main menu")
+                ws_manager.client_states[client_key] = 'main_menu'
+                await ws_manager.send_to_client(websocket, {
+                    'type': 'menu'
+                })
         
         else:
             await ws_manager.send_to_client(websocket, {
@@ -420,14 +593,16 @@ async def handle_client_message(websocket: WebSocketServerProtocol, message: dic
 
 async def websocket_handler(websocket: WebSocketServerProtocol, path: str, ws_manager: WebSocketManager):
     """Handle WebSocket connections"""
-    await ws_manager.register_client(websocket)
-    
     try:
+        await ws_manager.register_client(websocket)
+        logger.info(f"Client registered successfully: {websocket.remote_address}")
+        
         async for raw_message in websocket:
             try:
                 message = json.loads(raw_message)
                 await handle_client_message(websocket, message, ws_manager)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error: {e}")
                 await ws_manager.send_to_client(websocket, {
                     'type': 'output',
                     'content': 'Invalid message format',
@@ -435,14 +610,18 @@ async def websocket_handler(websocket: WebSocketServerProtocol, path: str, ws_ma
                 })
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 await ws_manager.send_to_client(websocket, {
                     'type': 'output',
                     'content': f'Error: {str(e)}',
                     'style': 'error-message'
                 })
     
-    except websockets.exceptions.ConnectionClosed:
-        pass
+    except websockets.exceptions.ConnectionClosed as e:
+        logger.info(f"Connection closed normally: {websocket.remote_address}")
+    except Exception as e:
+        logger.error(f"Unexpected error in websocket handler: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
     finally:
         await ws_manager.unregister_client(websocket)
 
@@ -452,8 +631,8 @@ async def start_server(host='localhost', port=8000):
     
     logger.info(f"Starting Roundtable WebSocket server on {host}:{port}")
     
-    async def handler(websocket, path):
-        await websocket_handler(websocket, path, ws_manager)
+    async def handler(websocket):
+        await websocket_handler(websocket, "/ws", ws_manager)
     
     server = await websockets.serve(handler, host, port)
     logger.info(f"WebSocket server running on ws://{host}:{port}/ws")
