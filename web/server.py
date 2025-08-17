@@ -196,6 +196,12 @@ class WebRoundtableSession:
             completed_at=None
         )
         
+        # Hide the prompt during discussion - no user input should be allowed
+        await self.ws_manager.broadcast({
+            'type': 'prompt',
+            'prompt': ''
+        })
+        
         turn_number = 0
         retry_count = 0
         max_retries = 3
@@ -231,6 +237,11 @@ class WebRoundtableSession:
                 
                 if retry_count >= max_retries:
                     await self.ui.send_error("Max retries exceeded. Exiting.")
+                    # Restore prompt on error
+                    await self.ws_manager.broadcast({
+                        'type': 'prompt',
+                        'prompt': '$ '
+                    })
                     return
                 
                 await self.ui.send_output("Retrying in 3 seconds...")
@@ -274,7 +285,7 @@ class WebRoundtableSession:
                     self.ws_manager.current_session = None
                     
                     # Reset prompt to default
-                    await ws_manager.send_to_client(websocket, {
+                    await self.ws_manager.broadcast({
                         'type': 'prompt',
                         'prompt': '$ '
                     })
