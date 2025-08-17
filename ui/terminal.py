@@ -24,6 +24,7 @@ class TerminalUI:
             "gpt5": "cyan",
             "claude": "green",
             "gemini": "yellow",
+            "deepseek": "blue",
             "claude_moderator": "magenta"
         }
     
