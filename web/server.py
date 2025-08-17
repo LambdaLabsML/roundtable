@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class WebSocketManager:
     def __init__(self):
         self.clients: Set[WebSocketServerProtocol] = set()
-        self.current_session: Optional['WebRoundtableSession'] = None
+        self.client_sessions: dict = {}  # Store individual sessions per client
         self.client_states: dict = {}  # Track state for each client
         
     def _get_client_key(self, websocket: WebSocketServerProtocol) -> str:
@@ -47,17 +47,19 @@ class WebSocketManager:
     async def unregister_client(self, websocket: WebSocketServerProtocol):
         """Unregister a WebSocket client"""
         self.clients.discard(websocket)
-        logger.info(f"Client {websocket.remote_address} disconnected")
-    
-    async def broadcast(self, message: dict):
-        """Broadcast message to all connected clients"""
-        if not self.clients:
-            return
+        
+        # Clean up client-specific session and state
+        client_key = self._get_client_key(websocket)
+        if client_key in self.client_sessions:
+            del self.client_sessions[client_key]
+        if client_key in self.client_states:
+            del self.client_states[client_key]
             
-        await asyncio.gather(
-            *[self.send_to_client(client, message) for client in self.clients],
-            return_exceptions=True
-        )
+        logger.info(f"Client {websocket.remote_address} disconnected and cleaned up")
+    
+    async def broadcast_to_client(self, websocket: WebSocketServerProtocol, message: dict):
+        """Send message to a specific client (replaces broadcast for session isolation)"""
+        await self.send_to_client(websocket, message)
     
     async def send_to_client(self, websocket: WebSocketServerProtocol, message: dict):
         """Send message to specific client"""
@@ -69,9 +71,10 @@ class WebSocketManager:
             logger.error(f"Error sending message to client: {e}")
 
 class WebRoundtableSession:
-    def __init__(self, websocket_manager: WebSocketManager):
+    def __init__(self, websocket_manager: WebSocketManager, websocket: WebSocketServerProtocol):
         self.ws_manager = websocket_manager
-        self.ui = WebUI(websocket_manager)
+        self.websocket = websocket
+        self.ui = WebUI(websocket_manager, websocket)
         self.logger = SessionLogger()
         self.turn_manager = TurnManager()
         
@@ -197,7 +200,7 @@ class WebRoundtableSession:
         )
         
         # Hide the prompt during discussion - no user input should be allowed
-        await self.ws_manager.broadcast({
+        await self.ws_manager.broadcast_to_client(self.websocket, {
             'type': 'prompt',
             'prompt': ''
         })
@@ -238,7 +241,7 @@ class WebRoundtableSession:
                 if retry_count >= max_retries:
                     await self.ui.send_error("Max retries exceeded. Exiting.")
                     # Restore prompt on error
-                    await self.ws_manager.broadcast({
+                    await self.ws_manager.broadcast_to_client(self.websocket, {
                         'type': 'prompt',
                         'prompt': '$ '
                     })
@@ -281,11 +284,13 @@ class WebRoundtableSession:
                     await self.ui.send_output("", "")
                     await self.ui.send_output("Press Enter to return to main menu...", "system-message")
                     
-                    # Clear the current session
-                    self.ws_manager.current_session = None
+                    # Clear the current session for this client
+                    client_key = self.ws_manager._get_client_key(self.websocket)
+                    if client_key in self.ws_manager.client_sessions:
+                        del self.ws_manager.client_sessions[client_key]
                     
                     # Reset prompt to default
-                    await self.ws_manager.broadcast({
+                    await self.ws_manager.broadcast_to_client(self.websocket, {
                         'type': 'prompt',
                         'prompt': '$ '
                     })
@@ -507,8 +512,9 @@ async def handle_client_message(websocket: WebSocketServerProtocol, message: dic
             topic = command[7:].strip()
             if topic:
                 try:
-                    session = WebRoundtableSession(ws_manager)
-                    ws_manager.current_session = session
+                    client_key = ws_manager._get_client_key(websocket)
+                    session = WebRoundtableSession(ws_manager, websocket)
+                    ws_manager.client_sessions[client_key] = session
                     await session.run_discussion(topic)
                 except Exception as e:
                     logger.error(f"Error creating session: {e}")
@@ -529,13 +535,14 @@ async def handle_client_message(websocket: WebSocketServerProtocol, message: dic
         
 
         
-        elif ws_manager.current_session is None and len(command) > 0 and not command.isdigit() and command not in ['1', '2', '3', 'help', 'c'] and ws_manager.client_states.get(ws_manager._get_client_key(websocket)) != 'session_selection':
+        elif ws_manager.client_sessions.get(ws_manager._get_client_key(websocket)) is None and len(command) > 0 and not command.isdigit() and command not in ['1', '2', '3', 'help', 'c'] and ws_manager.client_states.get(ws_manager._get_client_key(websocket)) != 'session_selection':
             # Handle topic input directly (when not in a session and not a menu command)
             topic = command.strip()
             if topic:
                 try:
-                    session = WebRoundtableSession(ws_manager)
-                    ws_manager.current_session = session
+                    client_key = ws_manager._get_client_key(websocket)
+                    session = WebRoundtableSession(ws_manager, websocket)
+                    ws_manager.client_sessions[client_key] = session
                     await session.run_discussion(topic)
                 except Exception as e:
                     logger.error(f"Error creating session: {e}")
